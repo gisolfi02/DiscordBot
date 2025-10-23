@@ -41,6 +41,11 @@ body {
   border: 2px solid;
 }
 
+#inputBox:focus {
+  outline: none;
+  border: none;
+}
+
 #timer {
   font-size: 25px;
   align-content: center;
