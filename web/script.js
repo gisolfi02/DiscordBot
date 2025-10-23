@@ -98,7 +98,7 @@ inputBox.addEventListener("input", () => {
   } else if (currentWord.startsWith(typed)) {
     currentSpan.style.backgroundColor = ""; // parziale corretto
   } else {
-    currentSpan.style.backgroundColor = "red"; // errore nella digitazione
+    currentSpan.style.backgroundColor = "#ef4444"; // errore nella digitazione
   }
 });
 
