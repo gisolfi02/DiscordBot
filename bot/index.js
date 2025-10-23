@@ -26,6 +26,9 @@ app.use(express.json());
 
 // Memoria partite attive
 let activeGames = new Map();
+// token -> { userId, username, channelId }
+let activeTokens = new Map();
+
 
 // === Discord Bot ===
 const client = new Client({
@@ -42,9 +45,18 @@ client.on("messageCreate", async (message) => {
 
   // !play
   if (message.content.startsWith("!play")) {
-    const gameUrl = `${BASE_URL}/?userId=${user.id}&username=${encodeURIComponent(user.username)}&channelId=${message.channel.id}`;
-    return message.reply({ content: `<@${user.id}>, clicca qui per iniziare la tua partita:\n👉 [Avvia Partita](${gameUrl})` });
+    // genera token univoco
+    const token = Math.random().toString(36).substring(2, 15);
+    activeTokens.set(token, { userId: user.id, username: user.username, channelId: message.channel.id });
+    setTimeout(() => activeTokens.delete(token), 2 * 60 * 1000);
+
+
+    const gameUrl = `${BASE_URL}/play?token=${token}`;
+    message.reply({
+      content: `🎮 <@${user.id}>, clicca qui per iniziare la tua partita:\n👉 [Avvia Partita](${gameUrl})`
+    });
   }
+
 
   // !leaderboard
   if (message.content.startsWith("!leaderboard")) {
@@ -79,11 +91,17 @@ client.on("messageCreate", async (message) => {
 
 // avvio partita
 app.post("/api/start", (req, res) => {
-  const { userId, username, channelId } = req.body;
+  const { token } = req.body;
+  const session = activeTokens.get(token);
+  if (!session) return res.status(403).json({ error: "Token non valido o scaduto." });
+
+  const { userId, username, channelId } = session;
   const words = Array.from({ length: 200 }, () => WORDS[Math.floor(Math.random() * WORDS.length)]);
-  activeGames.set(userId, { words, correct: 0, total: 0, index: 0, username, channelId });
+
+  activeGames.set(userId, { words, correct: 0, total: 0, index: 0, username, channelId, token });
   res.json({ words });
 });
+
 
 // verifica parola
 app.post("/api/check", (req, res) => {
@@ -123,6 +141,9 @@ app.post("/api/end", async (req, res) => {
   const { userId } = req.body;
   const game = activeGames.get(userId);
   if (!game) return res.status(400).json({ error: "Nessuna partita attiva" });
+
+  const { token } = game;
+  if (token) activeTokens.delete(token);
 
   const accuracy = ((game.correct / game.total) * 100 || 0).toFixed(2);
   const wpm = Math.round((game.correct / 60) * 60);

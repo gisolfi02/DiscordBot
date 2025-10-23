@@ -1,8 +1,6 @@
-// Ottiene userId e username dall'URL
 const params = new URLSearchParams(window.location.search);
-let userId = params.get("userId") || crypto.randomUUID();
-let username = params.get("username") || "Guest";
-let channelId = params.get("channelId");
+let token = params.get("token");
+
 
 let words = [];
 let currentIndex = 0;
@@ -19,7 +17,7 @@ async function startGame() {
   const res = await fetch("/api/start", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId, username, channelId })
+    body: JSON.stringify({ token })
   });
   const data = await res.json();
   words = data.words;
