@@ -51,7 +51,7 @@ client.on("messageCreate", async (message) => {
     setTimeout(() => activeTokens.delete(token), 2 * 60 * 1000);
 
 
-    const gameUrl = `${BASE_URL}/play?token=${token}`;
+    const gameUrl = `${BASE_URL}/?token=${token}`;
     message.reply({
       content: `🎮 <@${user.id}>, clicca qui per iniziare la tua partita:\n👉 [Avvia Partita](${gameUrl})`
     });
