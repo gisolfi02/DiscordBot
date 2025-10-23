@@ -4,10 +4,9 @@ import { WORDS } from "./words.js";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import pkg from "pg";
+import { MongoClient } from "mongodb";
 
 dotenv.config();
-const { Pool } = pkg;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
@@ -15,24 +14,21 @@ const PORT = process.env.PORT || 3000;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
 console.log("🌍 BASE_URL attuale:", BASE_URL);
 
-// ✅ connessione PostgreSQL
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
-});
+// ✅ Connessione a MongoDB Atlas
+const mongoClient = new MongoClient(process.env.MONGODB_URI);
+let leaderboardCollection;
 
-// inizializza tabella leaderboard se non esiste
-async function initDB() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS leaderboard (
-      user_id TEXT PRIMARY KEY,
-      username TEXT,
-      best_wpm INT DEFAULT 0
-    );
-  `);
-  console.log("✅ PostgreSQL pronto (tabella leaderboard).");
+async function initMongo() {
+  try {
+    await mongoClient.connect();
+    const db = mongoClient.db("fastfingers"); // nome del database
+    leaderboardCollection = db.collection("leaderboard");
+    console.log("✅ MongoDB Atlas connesso e pronto!");
+  } catch (err) {
+    console.error("❌ Errore connessione MongoDB:", err);
+  }
 }
-initDB().catch((err) => console.error("❌ Errore initDB:", err));
+initMongo();
 
 // ================== EXPRESS CONFIG ==================
 app.use(express.static(path.join(__dirname, "../web")));
@@ -71,20 +67,19 @@ client.on("messageCreate", async (message) => {
   // ================== !leaderboard ==================
   if (message.content.startsWith("!leaderboard")) {
     try {
-      const { rows } = await pool.query(`
-        SELECT user_id, username, best_wpm
-        FROM leaderboard
-        ORDER BY best_wpm DESC
-        LIMIT 10;
-      `);
+      const topPlayers = await leaderboardCollection
+        .find({})
+        .sort({ best_wpm: -1 })
+        .limit(10)
+        .toArray();
 
-      if (rows.length === 0) {
+      if (topPlayers.length === 0) {
         return message.channel.send("🏆 Nessun punteggio registrato ancora!");
       }
 
       const medals = ["🥇", "🥈", "🥉"];
-      const fields = rows.map((p, i) => ({
-        name: `${medals[i] || `#${i + 1}`}  @${p.username}`,
+      const fields = topPlayers.map((p, i) => ({
+        name: `${medals[i] || `#${i + 1}`}  <@${p.user_id}>`,
         value: `⚡ **${p.best_wpm} WPM**`,
         inline: true,
       }));
@@ -174,18 +169,15 @@ app.post("/api/end", async (req, res) => {
   const lettersWrong = game.lettersWrong || 0;
   const keystrokes = lettersCorrect + lettersWrong;
 
-  // ✅ salva risultato su PostgreSQL
+  // ✅ salva o aggiorna il record su MongoDB
   try {
-    await pool.query(
-      `
-      INSERT INTO leaderboard (user_id, username, best_wpm)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (user_id)
-      DO UPDATE SET
-        username = EXCLUDED.username,
-        best_wpm = GREATEST(leaderboard.best_wpm, EXCLUDED.best_wpm);
-    `,
-      [userId, game.username, wpm]
+    await leaderboardCollection.updateOne(
+      { user_id: userId },
+      {
+        $set: { username: game.username },
+        $max: { best_wpm: wpm },
+      },
+      { upsert: true }
     );
   } catch (err) {
     console.error("❌ Errore salvataggio leaderboard:", err);
@@ -198,7 +190,7 @@ app.post("/api/end", async (req, res) => {
       .catch(() => null);
     if (channel) {
       const embed = new EmbedBuilder()
-        .setTitle(`🏁 FastFingers — Risultato di @${game.username}`)
+        .setTitle(`🏁 FastFingers — Risultato di <@${userId}>`)
         .setColor(0x00aaff)
         .addFields(
           {
@@ -228,18 +220,15 @@ app.post("/api/end", async (req, res) => {
 // leaderboard via browser (solo JSON)
 app.get("/api/leaderboard", async (req, res) => {
   try {
-    const { rows } = await pool.query(`
-      SELECT user_id, username, best_wpm
-      FROM leaderboard
-      ORDER BY best_wpm DESC
-      LIMIT 10;
-    `);
-    res.json(rows);
+    const data = await leaderboardCollection
+      .find({})
+      .sort({ best_wpm: -1 })
+      .limit(10)
+      .toArray();
+    res.json(data);
   } catch (err) {
     console.error("❌ Errore lettura leaderboard:", err);
-    res
-      .status(500)
-      .json({ error: "Errore nel recupero della classifica" });
+    res.status(500).json({ error: "Errore nel recupero della classifica" });
   }
 });
 
