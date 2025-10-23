@@ -1,4 +1,3 @@
-// Ottiene userId e username dall'URL
 const params = new URLSearchParams(window.location.search);
 let userId = params.get("userId") || crypto.randomUUID();
 let username = params.get("username") || "Guest";
@@ -9,8 +8,11 @@ let currentIndex = 0;
 let results = [];
 let timeLeft = 60;
 let timerInterval;
-let timerStarted = false; // NEW: il timer parte solo alla prima digitazione
-const WINDOW_SIZE = 30; // parole visibili
+let timerStarted = false;
+
+const WORDS_PER_LINE = 10; // parole per riga (puoi adattarlo)
+const LINES_VISIBLE = 2;   // numero di righe visibili
+const WORDS_VISIBLE = WORDS_PER_LINE * LINES_VISIBLE;
 
 const wordBox = document.getElementById("wordBox");
 const inputBox = document.getElementById("inputBox");
@@ -29,13 +31,15 @@ async function startGame() {
   inputBox.focus();
 }
 
-// Rende le parole sullo schermo
+// Funzione per renderizzare 2 righe di parole alla volta
 function renderWords() {
-  const start = Math.max(0, currentIndex - 3);
-  const end = Math.min(words.length, start + WINDOW_SIZE);
+  const currentLine = Math.floor(currentIndex / WORDS_PER_LINE);
+  const start = currentLine * WORDS_PER_LINE;
+  const end = Math.min(words.length, start + WORDS_VISIBLE);
 
-  wordBox.innerHTML = words
-    .slice(start, end)
+  const visibleWords = words.slice(start, end);
+
+  wordBox.innerHTML = visibleWords
     .map((w, i) => {
       const realIndex = start + i;
       if (realIndex < currentIndex) {
@@ -51,7 +55,7 @@ function renderWords() {
     .join(" ");
 }
 
-// Gestione input tastiera
+// Timer che parte alla prima digitazione
 inputBox.addEventListener("keydown", async (e) => {
   if (!timerStarted && e.key.length === 1) {
     timerStarted = true;
@@ -79,7 +83,15 @@ inputBox.addEventListener("keydown", async (e) => {
 
     results[currentIndex] = data.correct;
     currentIndex++;
-    renderWords();
+
+    // Se si supera una riga, carica la successiva
+    const currentLine = Math.floor(currentIndex / WORDS_PER_LINE);
+    const previousLine = Math.floor((currentIndex - 1) / WORDS_PER_LINE);
+    if (currentLine !== previousLine) {
+      renderWords(); // aggiorna solo quando si passa alla prossima riga
+    } else {
+      renderWords(); // aggiorna parola corrente
+    }
 
     if (!data.next) endGame();
   }
