@@ -71,3 +71,50 @@ body {
 }
 
 
+/* ✅ Responsività tablet */
+@media (max-width: 900px) {
+  #wordBox {
+    font-size: 22px;
+    padding: 15px;
+  }
+
+  #inputBox {
+    width: 80%;
+    font-size: 16px;
+  }
+
+  #timer {
+    font-size: 22px;
+  }
+}
+
+/* ✅ Responsività smartphone */
+@media (max-width: 600px) {
+  body {
+    padding: 15px;
+  }
+
+  #wordBox {
+    font-size: 18px;
+    line-height: 1.8;
+    padding: 12px;
+    border-radius: 20px;
+    min-height: 100px;
+  }
+
+  #inputBox {
+    width: 100%;
+    font-size: 16px;
+    padding: 12px;
+  }
+
+  #timer {
+    font-size: 20px;
+    padding: 8px 16px;
+  }
+
+  #inputContainer {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
