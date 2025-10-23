@@ -9,6 +9,7 @@ let currentIndex = 0;
 let results = [];
 let timeLeft = 60;
 let timerInterval;
+let timerStarted = false; // NEW: il timer parte solo alla prima digitazione
 const WINDOW_SIZE = 30; // parole visibili
 
 const wordBox = document.getElementById("wordBox");
@@ -26,9 +27,9 @@ async function startGame() {
   results = new Array(words.length).fill(null);
   renderWords();
   inputBox.focus();
-  startTimer();
 }
 
+// Rende le parole sullo schermo
 function renderWords() {
   const start = Math.max(0, currentIndex - 3);
   const end = Math.min(words.length, start + WINDOW_SIZE);
@@ -50,7 +51,13 @@ function renderWords() {
     .join(" ");
 }
 
+// Gestione input tastiera
 inputBox.addEventListener("keydown", async (e) => {
+  if (!timerStarted && e.key.length === 1) {
+    timerStarted = true;
+    startTimer();
+  }
+
   if (e.key === " ") {
     e.preventDefault();
     if (timeLeft <= 0) return;
@@ -78,10 +85,27 @@ inputBox.addEventListener("keydown", async (e) => {
   }
 });
 
+// NEW: evidenzia dinamicamente la parola corrente in base alla digitazione
+inputBox.addEventListener("input", () => {
+  const currentWord = words[currentIndex] || "";
+  const typed = inputBox.value;
+
+  const currentSpan = document.querySelector(".current");
+  if (!currentSpan) return;
+
+  if (typed.length === 0) {
+    currentSpan.style.color = ""; // colore predefinito
+  } else if (currentWord.startsWith(typed)) {
+    currentSpan.style.color = "gold"; // parziale corretto
+  } else {
+    currentSpan.style.color = "red"; // errore nella digitazione
+  }
+});
+
 function startTimer() {
   timerInterval = setInterval(() => {
     timeLeft--;
-    timerEl.textContent = `⏱️ ${timeLeft}`;
+    timerEl.textContent = `${timeLeft}`;
     if (timeLeft <= 0) endGame();
   }, 1000);
 }
