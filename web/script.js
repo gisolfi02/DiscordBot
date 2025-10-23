@@ -55,19 +55,28 @@ function renderWords() {
     .join(" ");
 }
 
-// Timer che parte alla prima digitazione
-inputBox.addEventListener("keydown", async (e) => {
+// Timer che parte alla prima digitazione (desktop e mobile)
+inputBox.addEventListener("keydown", (e) => {
+  // Avvia il timer alla prima digitazione effettiva
   if (!timerStarted && e.key.length === 1) {
     timerStarted = true;
     startTimer();
   }
 
-  if (e.key === " ") {
-    e.preventDefault();
-    if (timeLeft <= 0) return;
+  // Previene il comportamento predefinito dello spazio su desktop
+  if (e.key === " ") e.preventDefault();
+});
 
-    const word = inputBox.value.trim();
+// ✅ Gestione della digitazione e rilevamento spazio anche su mobile
+inputBox.addEventListener("input", async () => {
+  const typed = inputBox.value;
+
+  // Se la parola termina con uno spazio → considerala inviata
+  if (typed.endsWith(" ")) {
+    const word = typed.trim();
     inputBox.value = "";
+
+    if (timeLeft <= 0) return;
 
     const res = await fetch("/api/check", {
       method: "POST",
