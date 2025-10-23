@@ -55,19 +55,48 @@ function renderWords() {
     .join(" ");
 }
 
-// Timer che parte alla prima digitazione (desktop e mobile)
-inputBox.addEventListener("keydown", (e) => {
-  // Avvia il timer alla prima digitazione effettiva
+// Funzione che processa una parola terminata
+async function handleWordSubmit(word) {
+  if (timeLeft <= 0) return;
+
+  const res = await fetch("/api/check", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, word })
+  });
+
+  const data = await res.json();
+  if (data.error) {
+    console.error("Errore:", data.error);
+    return;
+  }
+
+  results[currentIndex] = data.correct;
+  currentIndex++;
+
+  // Se si supera una riga, carica la successiva
+  const currentLine = Math.floor(currentIndex / WORDS_PER_LINE);
+  const previousLine = Math.floor((currentIndex - 1) / WORDS_PER_LINE);
+  renderWords();
+  if (!data.next) endGame();
+}
+
+// ✅ Gestione tastiera fisica (desktop)
+inputBox.addEventListener("keydown", async (e) => {
   if (!timerStarted && e.key.length === 1) {
     timerStarted = true;
     startTimer();
   }
 
-  // Previene il comportamento predefinito dello spazio su desktop
-  if (e.key === " ") e.preventDefault();
+  if (e.key === " ") {
+    e.preventDefault(); // evita spazi multipli
+    const word = inputBox.value.trim();
+    inputBox.value = "";
+    await handleWordSubmit(word);
+  }
 });
 
-// ✅ Gestione della digitazione e rilevamento spazio anche su mobile
+// ✅ Gestione tastiera mobile (input event)
 inputBox.addEventListener("input", async () => {
   const typed = inputBox.value;
 
@@ -75,36 +104,10 @@ inputBox.addEventListener("input", async () => {
   if (typed.endsWith(" ")) {
     const word = typed.trim();
     inputBox.value = "";
-
-    if (timeLeft <= 0) return;
-
-    const res = await fetch("/api/check", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, word })
-    });
-
-    const data = await res.json();
-    if (data.error) {
-      console.error("Errore:", data.error);
-      return;
-    }
-
-    results[currentIndex] = data.correct;
-    currentIndex++;
-
-    // Se si supera una riga, carica la successiva
-    const currentLine = Math.floor(currentIndex / WORDS_PER_LINE);
-    const previousLine = Math.floor((currentIndex - 1) / WORDS_PER_LINE);
-    if (currentLine !== previousLine) {
-      renderWords(); // aggiorna solo quando si passa alla prossima riga
-    } else {
-      renderWords(); // aggiorna parola corrente
-    }
-
-    if (!data.next) endGame();
+    await handleWordSubmit(word);
   }
 });
+
 
 // NEW: evidenzia dinamicamente la parola corrente in base alla digitazione
 inputBox.addEventListener("input", () => {
