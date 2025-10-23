@@ -84,7 +84,7 @@ client.on("messageCreate", async (message) => {
 
       const medals = ["🥇", "🥈", "🥉"];
       const fields = rows.map((p, i) => ({
-        name: `${medals[i] || `#${i + 1}`}  <@${p.user_id}>`,
+        name: `${medals[i] || `#${i + 1}`}  @${p.username}`,
         value: `⚡ **${p.best_wpm} WPM**`,
         inline: true,
       }));
@@ -198,7 +198,7 @@ app.post("/api/end", async (req, res) => {
       .catch(() => null);
     if (channel) {
       const embed = new EmbedBuilder()
-        .setTitle(`🏁 FastFingers — Risultato di <@${userId}>`)
+        .setTitle(`🏁 FastFingers — Risultato di @${game.username}`)
         .setColor(0x00aaff)
         .addFields(
           {
