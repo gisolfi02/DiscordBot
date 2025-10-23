@@ -78,35 +78,44 @@ async function handleWordSubmit(word) {
   const currentLine = Math.floor(currentIndex / WORDS_PER_LINE);
   const previousLine = Math.floor((currentIndex - 1) / WORDS_PER_LINE);
   renderWords();
+
   if (!data.next) endGame();
 }
 
-// ✅ Gestione tastiera fisica (desktop)
+// ✅ Tastiera fisica (desktop)
 inputBox.addEventListener("keydown", async (e) => {
+  // Avvia timer alla prima pressione su desktop
   if (!timerStarted && e.key.length === 1) {
     timerStarted = true;
     startTimer();
   }
 
   if (e.key === " ") {
-    e.preventDefault(); // evita spazi multipli
+    e.preventDefault();
     const word = inputBox.value.trim();
     inputBox.value = "";
     await handleWordSubmit(word);
   }
 });
 
-// ✅ Gestione tastiera mobile (input event)
+// ✅ Tastiera virtuale (mobile)
 inputBox.addEventListener("input", async () => {
   const typed = inputBox.value;
 
-  // Se la parola termina con uno spazio → considerala inviata
+  // ⏱️ Avvia timer alla prima digitazione su mobile
+  if (!timerStarted && typed.length > 0) {
+    timerStarted = true;
+    startTimer();
+  }
+
+  // Se l'utente ha digitato uno spazio → parola terminata
   if (typed.endsWith(" ")) {
     const word = typed.trim();
     inputBox.value = "";
     await handleWordSubmit(word);
   }
 });
+
 
 
 // NEW: evidenzia dinamicamente la parola corrente in base alla digitazione
