@@ -93,27 +93,14 @@ inputBox.addEventListener("input", () => {
   const currentSpan = document.querySelector(".current");
   if (!currentSpan) return;
 
-  // Se la parola digitata coincide perfettamente con l'inizio di quella richiesta
-  // (fino al numero di caratteri digitati) → grigio
-  let isCorrectSoFar = true;
-  for (let i = 0; i < typed.length; i++) {
-    if (typed[i] !== currentWord[i]) {
-      isCorrectSoFar = false;
-      break;
-    }
-  }
-
   if (typed.length === 0) {
-    currentSpan.classList.remove("error");
-    currentSpan.style.backgroundColor = "#d3d3d3";
-  } else if (isCorrectSoFar) {
-    currentSpan.classList.remove("error");
-    currentSpan.style.backgroundColor = "#d3d3d3";
+    currentSpan.style.color = ""; // colore predefinito
+  } else if (currentWord.startsWith(typed)) {
+    currentSpan.style.color = ""; // parziale corretto
   } else {
-    currentSpan.classList.add("error");
+    currentSpan.style.color = "red"; // errore nella digitazione
   }
 });
-
 
 function startTimer() {
   timerInterval = setInterval(() => {

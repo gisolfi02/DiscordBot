@@ -32,11 +32,6 @@ body {
   color: #ef4444;
 }
 
-.current {
-  color: #facc15;
-  font-weight: bold;
-}
-
 #inputBox {
   width: 70%;
   padding: 10px;
