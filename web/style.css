@@ -70,10 +70,8 @@ body {
 .current {
   background-color: #d3d3d3; /* grigio chiaro iniziale */
   color: black;
-  font-weight: bold;
-  border-radius: 5px;
+  border-radius: 2px;
   padding: 3px 6px;
-  transition: background-color 0.2s ease-in-out; /* transizione fluida */
 }
 
 .current.error {
