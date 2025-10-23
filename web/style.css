@@ -66,3 +66,17 @@ body {
   width: 100%;
   gap: 5%;
 }
+
+.current {
+  background-color: #d3d3d3; /* grigio chiaro iniziale */
+  color: black;
+  font-weight: bold;
+  border-radius: 5px;
+  padding: 3px 6px;
+  transition: background-color 0.2s ease-in-out; /* transizione fluida */
+}
+
+.current.error {
+  background-color: #ef4444; /* rosso quando l'utente sbaglia */
+  color: black;
+}

@@ -93,12 +93,19 @@ inputBox.addEventListener("input", () => {
   const currentSpan = document.querySelector(".current");
   if (!currentSpan) return;
 
+  // Se l'utente non ha ancora digitato nulla → sfondo grigio
   if (typed.length === 0) {
-    currentSpan.style.color = ""; // colore predefinito
-  } else if (currentWord.startsWith(typed)) {
-    currentSpan.style.color = "gold"; // parziale corretto
-  } else {
-    currentSpan.style.color = "red"; // errore nella digitazione
+    currentSpan.classList.remove("error");
+    currentSpan.style.backgroundColor = "#d3d3d3";
+  } 
+  // Se la parola digitata è ancora coerente con quella richiesta
+  else if (currentWord.startsWith(typed)) {
+    currentSpan.classList.remove("error");
+    currentSpan.style.backgroundColor = "#d3d3d3";
+  } 
+  // Se l'utente digita in modo errato
+  else {
+    currentSpan.classList.add("error");
   }
 });
 
