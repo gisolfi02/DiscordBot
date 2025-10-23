@@ -1,0 +1,68 @@
+body {
+  background-color: #97bae8;
+  color: black;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  padding: 30px;
+}
+
+#container {
+  max-width: 800px;
+  margin: auto;
+}
+
+#wordBox {
+  margin: 30px auto;
+  width: 100%;
+  line-height: 2;
+  font-size: 25px;
+  text-align: left;
+  background-color: #fff;
+  color: black;
+  border-radius: 30px;
+  padding: 20px 20px;
+  border: 2px solid;
+}
+
+.correct {
+  color: #4ade80;
+}
+
+.wrong {
+  color: #ef4444;
+}
+
+.current {
+  color: #facc15;
+  font-weight: bold;
+}
+
+#inputBox {
+  width: 70%;
+  padding: 10px;
+  font-size: 18px;
+  border-radius: 15px;
+  border: 2px solid;
+}
+
+#timer {
+  font-size: 25px;
+  align-content: center;
+  background-color: #181888c2;
+  border-radius: 8px;
+  padding: 10px;
+  color: white;
+}
+
+#results {
+  margin-top: 30px;
+  font-size: 18px;
+}
+
+
+#inputContainer {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  gap: 5%;
+}
