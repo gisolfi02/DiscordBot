@@ -15,6 +15,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const leaderboardFile = path.join(__dirname, "data", "leaderboard.json");
 const BASE_URL = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+console.log("🌍 BASE_URL attuale:", BASE_URL);
 
 
 if (!fs.existsSync(path.join(__dirname, "data"))) fs.mkdirSync(path.join(__dirname, "data"));
