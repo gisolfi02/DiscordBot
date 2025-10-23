@@ -6,6 +6,14 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { EmbedBuilder } from "discord.js";
+import pkg from "pg";
+const { Pool } = pkg;
+
+// Su Render spesso serve SSL: usiamo DATABASE_URL con ssl abilitato.
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
+});
 
 
 dotenv.config();
@@ -13,13 +21,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const leaderboardFile = path.join(__dirname, "data", "leaderboard.json");
 const BASE_URL = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
 console.log("🌍 BASE_URL attuale:", BASE_URL);
 
 
-if (!fs.existsSync(path.join(__dirname, "data"))) fs.mkdirSync(path.join(__dirname, "data"));
-if (!fs.existsSync(leaderboardFile)) fs.writeFileSync(leaderboardFile, "{}");
 
 app.use(express.static(path.join(__dirname, "../web")));
 app.use(express.json());
@@ -36,6 +41,20 @@ client.once("ready", () => {
   console.log(`✅ Bot attivo come ${client.user.tag}`);
 });
 
+async function initDB() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS leaderboard (
+      user_id   TEXT PRIMARY KEY,
+      username  TEXT NOT NULL,
+      best_wpm  INT  NOT NULL DEFAULT 0
+    );
+  `);
+  console.log("✅ PostgreSQL pronto (tabella leaderboard).");
+}
+initDB().catch(err => {
+  console.error("❌ Errore initDB:", err);
+});
+
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
   const user = message.author;
@@ -48,30 +67,35 @@ client.on("messageCreate", async (message) => {
 
   // !leaderboard
   if (message.content.startsWith("!leaderboard")) {
-  const leaderboard = JSON.parse(fs.readFileSync(leaderboardFile));
-  const sorted = Object.values(leaderboard).sort((a, b) => b.bestWPM - a.bestWPM);
+    const { rows } = await pool.query(`
+      SELECT user_id, username, best_wpm
+      FROM leaderboard
+      ORDER BY best_wpm DESC
+      LIMIT 10;
+    `);
 
-  if (sorted.length === 0) {
-    return message.channel.send("🏆 Nessun punteggio registrato ancora!");
+    if (rows.length === 0) {
+      return message.channel.send("🏆 Nessun punteggio registrato ancora!");
+    }
+
+    const medals = ["🥇", "🥈", "🥉"];
+    const fields = rows.map((p, i) => ({
+      name: `${medals[i] || `#${i + 1}`}  <@${p.user_id}>`,
+      value: `⚡ **${p.best_wpm} WPM**`,
+      inline: true
+    }));
+
+    const embed = new EmbedBuilder()
+      .setTitle("🏆 Classifica Globale — FastFingers")
+      .setDescription("Le migliori performance di tutti i giocatori!")
+      .setColor(0xffd700)
+      .addFields(fields)
+      .setFooter({ text: "🔥 Continua ad allenarti per salire in classifica!" })
+      .setTimestamp();
+
+    message.channel.send({ embeds: [embed] });
   }
 
-  const medals = ["🥇", "🥈", "🥉"];
-  const fields = sorted.slice(0, 10).map((p, i) => ({
-    name: `${medals[i] || `#${i + 1}`}  @${p.username}`,
-    value: `⚡ **${p.bestWPM} WPM**`,
-    inline: true
-  }));
-
-  const embed = new EmbedBuilder()
-    .setTitle("🏆 Classifica Globale — FastFingers")
-    .setDescription("Le migliori performance di tutti i giocatori!")
-    .setColor(0xffd700)
-    .addFields(fields)
-    .setFooter({ text: "🔥 Continua ad allenarti per salire in classifica!" })
-    .setTimestamp();
-
-  message.channel.send({ embeds: [embed] });
-}
 
 });
 
@@ -130,18 +154,26 @@ app.post("/api/end", async (req, res) => {
   const lettersWrong = game.lettersWrong || 0;
   const keystrokes = lettersCorrect + lettersWrong;
 
-  // salva leaderboard
-  const leaderboard = JSON.parse(fs.readFileSync(leaderboardFile));
-  leaderboard[userId] = leaderboard[userId] || { username: game.username, bestWPM: 0 };
-  if (wpm > leaderboard[userId].bestWPM) leaderboard[userId].bestWPM = wpm;
-  fs.writeFileSync(leaderboardFile, JSON.stringify(leaderboard, null, 2));
+  // ✅ salva o aggiorna la leaderboard nel database
+  try {
+    await pool.query(`
+      INSERT INTO leaderboard (user_id, username, best_wpm)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (user_id)
+      DO UPDATE SET
+        username = EXCLUDED.username,
+        best_wpm = GREATEST(leaderboard.best_wpm, EXCLUDED.best_wpm);
+    `, [userId, game.username, wpm]);
+  } catch (err) {
+    console.error("❌ Errore salvataggio leaderboard:", err);
+  }
 
   // 🔹 invio embed nel canale Discord
   if (game.channelId) {
     const channel = await client.channels.fetch(game.channelId).catch(() => null);
     if (channel) {
       const embed = new EmbedBuilder()
-        .setTitle(`🏁 FastFingers — Risultato di @${game.username}`)
+        .setTitle(`🏁 FastFingers — Risultato di <@${userId}>`)
         .setColor(0x00aaff)
         .addFields(
           { name: "🧠 Parole corrette", value: `${game.correct}/${game.total}`, inline: true },
@@ -162,11 +194,21 @@ app.post("/api/end", async (req, res) => {
 
 
 // leaderboard via browser (solo JSON)
-app.get("/api/leaderboard", (req, res) => {
-  const leaderboard = JSON.parse(fs.readFileSync(leaderboardFile));
-  const sorted = Object.values(leaderboard).sort((a, b) => b.bestWPM - a.bestWPM);
-  res.json(sorted.slice(0, 10));
+app.get("/api/leaderboard", async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT user_id, username, best_wpm
+      FROM leaderboard
+      ORDER BY best_wpm DESC
+      LIMIT 10;
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error("❌ Errore lettura leaderboard:", err);
+    res.status(500).json({ error: "Errore nel recupero della classifica" });
+  }
 });
+
 
 // avvio
 app.get("/health", (req, res) => res.status(200).send("OK"));
