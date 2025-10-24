@@ -74,6 +74,55 @@ body {
   padding: 3px 6px;
 }
 
+#theme-toggle {
+  position: absolute;
+  right: 5%;
+  text-decoration: none;
+  background: none;
+  border: none;
+  color: black;
+}
+
+#theme-toggle:hover {
+  cursor: pointer;
+  color: white;
+}
+
+#header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 🌙 Modalità Notte */
+body.night-mode {
+  background-color: #2f2f2f; /* Scuro */
+  color: white;
+}
+
+body.night-mode #wordBox {
+  background-color: #3c3c3c; /* Scuro */
+  color: white;
+  border: 2px solid #666;
+}
+
+body.night-mode #inputBox {
+  background-color: #555; /* Scuro */
+  color: white;
+  border: 2px solid #888;
+}
+
+body.night-mode #timer {
+  background-color: #444; /* Scuro */
+}
+
+body.night-mode #theme-toggle {
+  color: white;
+}
+
+body.night-mode #theme-toggle:hover {
+  color: #ffd700; /* Oro chiaro */
+}
 
 /* ✅ Responsività tablet */
 @media (max-width: 900px) {

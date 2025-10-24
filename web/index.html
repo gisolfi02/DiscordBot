@@ -5,11 +5,17 @@
   <title>Fast Typing</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="./img/logo.png" type="image/png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+              integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+              crossorigin="anonymous" referrerpolicy="no-referrer" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
 <body>
   <div id="container">
+    <div id="header">
     <h1>Fast typing</h1>
+    <button id="theme-toggle"><i class="fa-solid fa-moon fa-2xl"></i></button>
+    </div>
     <div id="wordBox"></div>
     <div id="inputContainer">   
     <input id="inputBox" type="text" placeholder="Digita qui..." autofocus />
@@ -18,5 +24,6 @@
     <div id="results"></div>
   </div>
   <script src="script.js"></script>
+  <script src="toggleMode.js"></script>
 </body>
 </html>
