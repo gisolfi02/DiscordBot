@@ -159,7 +159,6 @@ async function restartGame() {
   });
 
   const data = await res.json();
-  console.log("Nuove parole ricevute:", data.words);
   words = data.words; // Ottieni il nuovo set di parole
 
   // Resetta lo stato del gioco
