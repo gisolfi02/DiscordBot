@@ -138,22 +138,37 @@ async function endGame() {
 /**
  * Riavvia il gioco resettando il timer, gli indici, i risultati e la casella di input.
  */
-function restartGame() {
-  // Resetta il timer
-  timeLeft = 60;
-  timerEl.textContent = `${timeLeft}`;
-  timerStarted = false;
-  clearInterval(timerInterval);
-  
-  // Resetta gli indici e le parole
-  currentIndex = 0;
-  results = new Array(words.length).fill(null);
-  renderWords();
+async function restartGame() {
+  try{
+    // Resetta il timer
+    timeLeft = 60;
+    timerEl.textContent = `${timeLeft}`;
+    timerStarted = false;
+    clearInterval(timerInterval);
+    
+    // Fai una nuova chiamata al backend per ottenere un nuovo set di parole
+    const res = await fetch("/api/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, username, channelId })
+    });
 
-  // Svuota la casella di input
-  inputBox.value = "";
-  inputBox.disabled = false;
-  inputBox.focus();
+    const data = await res.json();
+    const words = data.words; // Ottieni il nuovo set di parole
+
+    // Resetta lo stato del gioco
+    currentIndex = 0;
+    results = new Array(words.length).fill(null);
+    renderWords();
+
+    // Svuota la casella di input
+    inputBox.value = "";
+    inputBox.disabled = false;
+    inputBox.focus();
+
+  } catch(err){
+    console.error("Errore nel riavvio del gioco:", err);
+  }
 }
 
 /**

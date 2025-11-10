@@ -118,13 +118,37 @@ client.on("messageCreate", async (message) => {
 
 // ================== API REST ==================
 
+// Funzione per generare una parola (favorendo quelle corte)
+function generateWord() {
+  // Pesi per le categorie di parole
+  const weightShort = 0.6; // 60% probabilità per parole corte
+  const weightMedium = 0.3; // 30% probabilità per parole medie
+  const weightLong = 0.1; // 10% probabilità per parole lunghe
+
+  // Scegli un numero casuale tra 0 e 1 per determinare quale categoria di parole scegliere
+  const rand = Math.random();
+
+  let chosenCategory;
+  if (rand < weightShort) {
+    chosenCategory = WORDS.filter(word => word.length <= 4); // Parole corte
+  } else if (rand < weightShort + weightMedium) {
+    chosenCategory = WORDS.filter(word => word.length >= 5 && word.length <= 7); // Parole medie
+  } else {
+    chosenCategory = WORDS.filter(word => word.length >= 8); // Parole lunghe
+  }
+
+  // Seleziona una parola a caso dalla categoria scelta
+  const randomIndex = Math.floor(Math.random() * chosenCategory.length);
+  return chosenCategory[randomIndex];
+}
+
 // Avvio partita
 app.post("/api/start", (req, res) => {
   const { userId, username, channelId } = req.body;
-  const words = Array.from(
-    { length: 200 },
-    () => WORDS[Math.floor(Math.random() * WORDS.length)] // Genera 200 parole casuali
-  );
+
+  // Genera 200 parole usando la nuova distribuzione
+  const words = Array.from({ length: 200 }, () => generateWord());
+
   activeGames.set(userId, {
     words,
     correct: 0,
@@ -133,8 +157,10 @@ app.post("/api/start", (req, res) => {
     username,
     channelId,
   });
+
   res.json({ words }); // Restituisce le parole al client
 });
+
 
 // Verifica parola
 app.post("/api/check", (req, res) => {
