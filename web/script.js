@@ -137,7 +137,7 @@ async function endGame() {
 
 /**
  * Riavvia il gioco resettando il timer, gli indici, i risultati e la casella di input.
- */
+ 
 async function restartGame() {
   try{
     // Resetta il timer
@@ -170,6 +170,7 @@ async function restartGame() {
     console.error("Errore nel riavvio del gioco:", err);
   }
 }
+  */
 
 /**
  * Gestisce gli eventi della tastiera fisica.
