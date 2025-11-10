@@ -160,11 +160,12 @@ async function restartGame() {
 
   const data = await res.json();
   console.log("Nuove parole ricevute:", data.words);
-  const words = data.words; // Ottieni il nuovo set di parole
+  words = data.words; // Ottieni il nuovo set di parole
 
   // Resetta lo stato del gioco
   currentIndex = 0;
   results = new Array(words.length).fill(null);
+  console.log(results);
   renderWords();
 }
 
