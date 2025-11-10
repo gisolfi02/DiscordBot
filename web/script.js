@@ -137,15 +137,15 @@ async function endGame() {
 
 /**
  * Riavvia il gioco resettando il timer, gli indici, i risultati e la casella di input.
- 
+ */
 async function restartGame() {
-  try{
+  try {
     // Resetta il timer
     timeLeft = 60;
     timerEl.textContent = `${timeLeft}`;
     timerStarted = false;
-    clearInterval(timerInterval);
-    
+    clearInterval(timerInterval); // Ferma il timer in corso
+
     // Fai una nuova chiamata al backend per ottenere un nuovo set di parole
     const res = await fetch("/api/start", {
       method: "POST",
@@ -158,19 +158,23 @@ async function restartGame() {
 
     // Resetta lo stato del gioco
     currentIndex = 0;
-    results = new Array(words.length).fill(null);
-    renderWords();
+    results = new Array(words.length).fill(null); // Resetta il risultato
+    renderWords(); // Rende le parole visibili nel gioco
 
     // Svuota la casella di input
     inputBox.value = "";
     inputBox.disabled = false;
     inputBox.focus();
 
-  } catch(err){
+    // Avvia il timer quando l'utente inizia a digitare
+    timerStarted = false; // Non partire subito
+    startTimer(); // Avvia il timer al prossimo input
+
+  } catch (err) {
     console.error("Errore nel riavvio del gioco:", err);
   }
 }
-  */
+
 
 /**
  * Gestisce gli eventi della tastiera fisica.
@@ -234,8 +238,7 @@ inputBox.addEventListener("input", () => {
   }
 });
 
-
-//restartButton.addEventListener("click", restartGame);
+restartButton.addEventListener("click", restartGame);
 
 // Avvia il gioco al caricamento della pagina
 startGame();

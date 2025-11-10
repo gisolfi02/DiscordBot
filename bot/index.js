@@ -121,9 +121,9 @@ client.on("messageCreate", async (message) => {
 // Funzione per generare una parola (favorendo quelle corte)
 function generateWord() {
   // Pesi per le categorie di parole
-  const weightShort = 0.6; // 60% probabilità per parole corte
+  const weightShort = 0.5; // 50% probabilità per parole corte
   const weightMedium = 0.3; // 30% probabilità per parole medie
-  const weightLong = 0.1; // 10% probabilità per parole lunghe
+  const weightLong = 0.2; // 20% probabilità per parole lunghe
 
   // Scegli un numero casuale tra 0 e 1 per determinare quale categoria di parole scegliere
   const rand = Math.random();
