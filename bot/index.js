@@ -1,61 +1,72 @@
+// Importazione dei moduli necessari
 import express from "express";
 import { Client, GatewayIntentBits, EmbedBuilder } from "discord.js";
-import { WORDS } from "./words.js";
-import dotenv from "dotenv";
+import { WORDS } from "./words.js"; // Lista di parole
+import dotenv from "dotenv"; // Per gestire le variabili d'ambiente
 import path from "path";
 import { fileURLToPath } from "url";
-import { MongoClient } from "mongodb";
+import { MongoClient } from "mongodb"; // Per connettersi a MongoDB
 
+// Configurazione delle variabili d'ambiente
 dotenv.config();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Configurazione di Express e variabili globali
 const app = express();
-const PORT = process.env.PORT || 3000;
-const BASE_URL = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
-console.log("🌍 BASE_URL attuale:", BASE_URL);
+const PORT = process.env.PORT || 3000; // Porta del server
+const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`; // URL base per il gioco
+console.log("BASE_URL attuale:", BASE_URL);
 
-// ✅ Connessione a MongoDB Atlas
-const mongoClient = new MongoClient(process.env.MONGODB_URI);
-let leaderboardCollection;
+//Connessione a MongoDB Atlas
+const mongoClient = new MongoClient(process.env.MONGODB_URI); // Connessione al database
+let leaderboardCollection; // Riferimento alla collezione "leaderboard"
 
+/**
+ * Inizializza la connessione a MongoDB e imposta la collezione "leaderboard".
+ */
 async function initMongo() {
   try {
     await mongoClient.connect();
-    const db = mongoClient.db("fastfingers"); // nome del database
-    leaderboardCollection = db.collection("leaderboard");
-    console.log("✅ MongoDB Atlas connesso e pronto!");
+    const db = mongoClient.db("fastfingers"); // Nome del database
+    leaderboardCollection = db.collection("leaderboard"); // Collezione per la classifica
+    console.log("MongoDB Atlas connesso e pronto!");
   } catch (err) {
-    console.error("❌ Errore connessione MongoDB:", err);
+    console.error("Errore connessione MongoDB:", err);
   }
 }
 initMongo();
 
 // ================== EXPRESS CONFIG ==================
+// Configura la cartella statica e il middleware per il parsing JSON
 app.use(express.static(path.join(__dirname, "../web")));
 app.use(express.json());
 
-// Memoria partite attive
-let activeGames = new Map();
+// Memoria per le partite attive
+let activeGames = new Map(); // Mappa che associa userId ai dati di gioco
 
 // ================== DISCORD BOT ==================
+// Configurazione del bot Discord
 const client = new Client({
   intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.Guilds, // Per gestire i server
+    GatewayIntentBits.GuildMessages, // Per gestire i messaggi
+    GatewayIntentBits.MessageContent, // Per leggere il contenuto dei messaggi
   ],
 });
 
+// Evento: il bot è pronto
 client.once("ready", () => {
-  console.log(`✅ Bot attivo come ${client.user.tag}`);
+  console.log(`Bot attivo come ${client.user.tag}`);
 });
 
+// Evento: gestione dei messaggi
 client.on("messageCreate", async (message) => {
-  if (message.author.bot) return;
+  if (message.author.bot) return; // Ignora i messaggi dei bot
   const user = message.author;
 
   // ================== !play ==================
   if (message.content.startsWith("!play")) {
+    // Genera un link per iniziare una partita
     const gameUrl = `${BASE_URL}/?userId=${user.id}&username=${encodeURIComponent(
       user.username
     )}&channelId=${message.channel.id}`;
@@ -67,9 +78,10 @@ client.on("messageCreate", async (message) => {
   // ================== !leaderboard ==================
   if (message.content.startsWith("!leaderboard")) {
     try {
+      // Recupera i migliori 10 giocatori dalla classifica
       const topPlayers = await leaderboardCollection
         .find({})
-        .sort({ best_wpm: -1 })
+        .sort({ best_wpm: -1 }) // Ordina per WPM decrescente
         .limit(10)
         .toArray();
 
@@ -77,6 +89,7 @@ client.on("messageCreate", async (message) => {
         return message.channel.send("🏆 Nessun punteggio registrato ancora!");
       }
 
+      // Crea i campi per l'embed della classifica
       const medals = ["🥇", "🥈", "🥉"];
       const fields = topPlayers.map((p, i) => ({
         name: `${medals[i] || `#${i + 1}`}  @${p.username}`,
@@ -84,6 +97,7 @@ client.on("messageCreate", async (message) => {
         inline: true,
       }));
 
+      // Crea e invia l'embed della classifica
       const embed = new EmbedBuilder()
         .setTitle("🏆 Classifica Globale — FastFingers")
         .setDescription("Le migliori performance di tutti i giocatori!")
@@ -96,20 +110,20 @@ client.on("messageCreate", async (message) => {
 
       message.channel.send({ embeds: [embed] });
     } catch (err) {
-      console.error("❌ Errore lettura leaderboard:", err);
-      message.channel.send("⚠️ Errore nel recupero della classifica.");
+      console.error("Errore lettura leaderboard:", err);
+      message.channel.send("Errore nel recupero della classifica.");
     }
   }
 });
 
 // ================== API REST ==================
 
-// avvio partita
+// Avvio partita
 app.post("/api/start", (req, res) => {
   const { userId, username, channelId } = req.body;
   const words = Array.from(
     { length: 200 },
-    () => WORDS[Math.floor(Math.random() * WORDS.length)]
+    () => WORDS[Math.floor(Math.random() * WORDS.length)] // Genera 200 parole casuali
   );
   activeGames.set(userId, {
     words,
@@ -119,20 +133,20 @@ app.post("/api/start", (req, res) => {
     username,
     channelId,
   });
-  res.json({ words });
+  res.json({ words }); // Restituisce le parole al client
 });
 
-// verifica parola
+// Verifica parola
 app.post("/api/check", (req, res) => {
   const { userId, word } = req.body;
   const game = activeGames.get(userId);
   if (!game)
     return res.status(400).json({ error: "Nessuna partita attiva" });
 
-  const expected = game.words[game.index];
-  const correct = word === expected;
+  const expected = game.words[game.index]; // Parola attesa
+  const correct = word === expected; // Verifica se la parola è corretta
 
-  // conteggio lettere corrette/sbagliate
+  // Conteggio lettere corrette/sbagliate
   let correctLetters = 0;
   let wrongLetters = 0;
   const minLen = Math.min(word.length, expected.length);
@@ -149,7 +163,7 @@ app.post("/api/check", (req, res) => {
   if (correct) game.correct++;
   game.index++;
 
-  // aggiorna statistiche lettere
+  // Aggiorna statistiche lettere
   game.lettersCorrect = (game.lettersCorrect || 0) + correctLetters;
   game.lettersWrong = (game.lettersWrong || 0) + wrongLetters;
 
@@ -163,13 +177,13 @@ app.post("/api/end", async (req, res) => {
   if (!game)
     return res.status(400).json({ error: "Nessuna partita attiva" });
 
-  const accuracy = ((game.correct / game.total) * 100 || 0).toFixed(2);
-  const wpm = Math.round((game.correct / 60) * 60);
+  const accuracy = ((game.correct / game.total) * 100 || 0).toFixed(2); // Accuratezza
+  const wpm = Math.round((game.correct / 60) * 60); // Parole per minuto
   const lettersCorrect = game.lettersCorrect || 0;
   const lettersWrong = game.lettersWrong || 0;
   const keystrokes = lettersCorrect + lettersWrong;
 
-  // ✅ salva o aggiorna il record su MongoDB
+  // Salva o aggiorna il record su MongoDB
   try {
     await leaderboardCollection.updateOne(
       { user_id: userId },
@@ -180,10 +194,10 @@ app.post("/api/end", async (req, res) => {
       { upsert: true }
     );
   } catch (err) {
-    console.error("❌ Errore salvataggio leaderboard:", err);
+    console.error("Errore salvataggio leaderboard:", err);
   }
 
-  // 🔹 invio embed nel canale Discord
+  // 🔹 Invio embed nel canale Discord
   if (game.channelId) {
     const channel = await client.channels
       .fetch(game.channelId)
@@ -213,11 +227,11 @@ app.post("/api/end", async (req, res) => {
     }
   }
 
-  activeGames.delete(userId);
+  activeGames.delete(userId); // Rimuove la partita dalla memoria
   res.json({ ok: true });
 });
 
-// leaderboard via browser (solo JSON)
+// Leaderboard via browser (solo JSON)
 app.get("/api/leaderboard", async (req, res) => {
   try {
     const data = await leaderboardCollection
@@ -227,16 +241,16 @@ app.get("/api/leaderboard", async (req, res) => {
       .toArray();
     res.json(data);
   } catch (err) {
-    console.error("❌ Errore lettura leaderboard:", err);
+    console.error("Errore lettura leaderboard:", err);
     res.status(500).json({ error: "Errore nel recupero della classifica" });
   }
 });
 
 // ================== HEALTH CHECK ==================
-app.get("/health", (req, res) => res.status(200).send("OK"));
+app.get("/health", (req, res) => res.status(200).send("OK")); // Endpoint per verificare lo stato del server
 
 // ================== AVVIO ==================
 app.listen(PORT, () =>
-  console.log(`🌐 Web server su http://localhost:${PORT}`)
+  console.log(`Web server su http://localhost:${PORT}`)
 );
-client.login(process.env.TOKEN);
+client.login(process.env.TOKEN); // Login del bot Discord

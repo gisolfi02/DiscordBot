@@ -64,7 +64,7 @@ body {
   display: flex;
   justify-content: flex-start;
   width: 100%;
-  gap: 5%;
+  gap: 2%;
 }
 
 .current {
@@ -92,6 +92,26 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+#restart-button {
+  align-content: center;
+  background-color: #b92727c2;
+  border-radius: 8px;
+  padding: 10px;
+  color: white;
+  border: none;
+}
+
+#restart-button:hover {
+  cursor: pointer;
+  background-color: #861111d5; 
+}
+
+#info{
+  display: flex;
+  flex-direction: row;
+  gap: 15%;
 }
 
 /* 🌙 Modalità Notte */
@@ -124,6 +144,13 @@ body.night-mode #theme-toggle:hover {
   color: #ffd700; /* Oro chiaro */
 }
 
+body.night-mode #restart-button {
+  background-color: #474747; 
+}
+
+body.night-mode #restart-button:hover {
+  background-color: #868686; 
+}
 /* ✅ Responsività tablet */
 @media (max-width: 900px) {
   #wordBox {
@@ -171,7 +198,6 @@ body.night-mode #theme-toggle:hover {
   #timer {
     font-size: 20px;
     padding: 8px 16px;
-    width: 5%;
   }
 
   #inputContainer {

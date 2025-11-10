@@ -1,23 +1,33 @@
+// Estrae i parametri dalla query string dell'URL
 const params = new URLSearchParams(window.location.search);
-let userId = params.get("userId") || crypto.randomUUID();
-let username = params.get("username") || "Guest";
-let channelId = params.get("channelId");
+let userId = params.get("userId") || crypto.randomUUID(); // Identificativo univoco dell'utente
+let username = params.get("username") || "Guest"; // Nome utente (default: "Guest")
+let channelId = params.get("channelId"); // ID del canale (opzionale)
 
-let words = [];
-let currentIndex = 0;
-let results = [];
-let timeLeft = 60;
-let timerInterval;
-let timerStarted = false;
+// Variabili di stato del gioco
+let words = []; // Lista delle parole da digitare
+let currentIndex = 0; // Indice della parola corrente
+let results = []; // Risultati delle parole digitate (true/false/null)
+let timeLeft = 60; // Tempo rimanente in secondi
+let timerInterval; // Riferimento al timer
+let timerStarted = false; // Flag per verificare se il timer è stato avviato
 
-const WORDS_PER_LINE = 10; // parole per riga (puoi adattarlo)
-const LINES_VISIBLE = 2;   // numero di righe visibili
-const WORDS_VISIBLE = WORDS_PER_LINE * LINES_VISIBLE;
+// Costanti per la visualizzazione delle parole
+const WORDS_PER_LINE = 10; // Numero di parole per riga
+const LINES_VISIBLE = 2;   // Numero di righe visibili
+const WORDS_VISIBLE = WORDS_PER_LINE * LINES_VISIBLE; // Numero totale di parole visibili
 
-const wordBox = document.getElementById("wordBox");
-const inputBox = document.getElementById("inputBox");
-const timerEl = document.getElementById("timer");
+// Elementi DOM
+const wordBox = document.getElementById("wordBox"); // Contenitore delle parole
+const inputBox = document.getElementById("inputBox"); // Casella di input
+const timerEl = document.getElementById("timer"); // Elemento per il timer
+const restartButton = document.getElementById("restart-button"); // Pulsante di restart
 
+/**
+ * Avvia il gioco richiedendo le parole iniziali dal server.
+ * Inizializza la lista delle parole e i risultati, quindi chiama `renderWords`.
+ * Imposta il focus sulla casella di input.
+ */
 async function startGame() {
   const res = await fetch("/api/start", {
     method: "POST",
@@ -25,64 +35,131 @@ async function startGame() {
     body: JSON.stringify({ userId, username, channelId })
   });
   const data = await res.json();
-  words = data.words;
-  results = new Array(words.length).fill(null);
-  renderWords();
-  inputBox.focus();
+  words = data.words; // Riceve la lista di parole dal server
+  results = new Array(words.length).fill(null); // Inizializza i risultati con `null`
+  renderWords(); // Renderizza le parole iniziali
+  inputBox.focus(); // Imposta il focus sulla casella di input
 }
 
-// Funzione per renderizzare 2 righe di parole alla volta
+/**
+ * Renderizza le parole visibili nella finestra di gioco.
+ * Mostra due righe di parole alla volta, evidenziando la parola corrente
+ * e colorando le parole già processate come corrette o errate.
+ */
 function renderWords() {
-  const currentLine = Math.floor(currentIndex / WORDS_PER_LINE);
-  const start = currentLine * WORDS_PER_LINE;
-  const end = Math.min(words.length, start + WORDS_VISIBLE);
+  const currentLine = Math.floor(currentIndex / WORDS_PER_LINE); // Calcola la riga corrente
+  const start = currentLine * WORDS_PER_LINE; // Indice iniziale delle parole visibili
+  const end = Math.min(words.length, start + WORDS_VISIBLE); // Indice finale delle parole visibili
 
-  const visibleWords = words.slice(start, end);
+  const visibleWords = words.slice(start, end); // Estrae le parole visibili
 
+  // Genera l'HTML per le parole visibili
   wordBox.innerHTML = visibleWords
     .map((w, i) => {
-      const realIndex = start + i;
+      const realIndex = start + i; // Indice reale della parola
       if (realIndex < currentIndex) {
+        // Parole già processate
         return results[realIndex] === true
-          ? `<span class="correct">${w}</span>`
-          : `<span class="wrong">${w}</span>`;
+          ? `<span class="correct">${w}</span>` // Corrette
+          : `<span class="wrong">${w}</span>`; // Errate
       } else if (realIndex === currentIndex) {
+        // Parola corrente
         return `<span class="current">${w}</span>`;
       } else {
+        // Parole future
         return `<span>${w}</span>`;
       }
     })
     .join(" ");
 }
 
-// Funzione che processa una parola terminata
+/**
+ * Gestisce l'invio di una parola da parte dell'utente.
+ * Controlla la parola con il server e aggiorna i risultati.
+ * Se necessario, carica la riga successiva di parole.
+ * @param {string} word - La parola digitata dall'utente.
+ */
 async function handleWordSubmit(word) {
-  if (timeLeft <= 0) return;
+  if (timeLeft <= 0) return; // Non fare nulla se il tempo è scaduto
 
   const res = await fetch("/api/check", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId, word })
+    body: JSON.stringify({ userId, word }) // Invia la parola al server per il controllo
   });
 
   const data = await res.json();
   if (data.error) {
-    console.error("Errore:", data.error);
+    console.error("Errore:", data.error); // Logga eventuali errori
     return;
   }
 
-  results[currentIndex] = data.correct;
-  currentIndex++;
+  results[currentIndex] = data.correct; // Aggiorna il risultato della parola corrente
+  currentIndex++; // Passa alla parola successiva
 
-  // Se si supera una riga, carica la successiva
-  const currentLine = Math.floor(currentIndex / WORDS_PER_LINE);
-  const previousLine = Math.floor((currentIndex - 1) / WORDS_PER_LINE);
-  renderWords();
+  renderWords(); // Aggiorna la visualizzazione delle parole
 
-  if (!data.next) endGame();
+  if (!data.next) endGame(); // Termina il gioco se non ci sono altre parole
 }
 
-// ✅ Tastiera fisica (desktop)
+/**
+ * Avvia il timer del gioco, decrementando il tempo rimanente ogni secondo.
+ * Termina il gioco quando il tempo scade.
+ */
+function startTimer() {
+  timerInterval = setInterval(() => {
+    timeLeft--; // Decrementa il tempo rimanente
+    timerEl.textContent = `${timeLeft}`; // Aggiorna il timer visibile
+    if (timeLeft <= 0) endGame(); // Termina il gioco se il tempo è scaduto
+  }, 1000);
+}
+
+/**
+ * Termina il gioco, disabilita la casella di input e invia i risultati al server.
+ * Mostra un messaggio di fine partita o un errore in caso di problemi.
+ */
+async function endGame() {
+  clearInterval(timerInterval); // Ferma il timer
+  inputBox.disabled = true; // Disabilita la casella di input
+  wordBox.innerHTML = `<h2>⏳ Calcolo dei risultati...</h2>`; // Mostra un messaggio di attesa
+
+  try {
+    await fetch("/api/end", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }) // Invia i risultati al server
+    });
+    wordBox.innerHTML = `<h2>🏁 Partita terminata!</h2><p>I risultati sono stati inviati nel canale Discord.</p>`;
+  } catch (err) {
+    wordBox.innerHTML = `<h2>⚠️ Errore nel salvataggio dei risultati.</h2><p>Riprova più tardi.</p>`;
+  }
+}
+
+/**
+ * Riavvia il gioco resettando il timer, gli indici, i risultati e la casella di input.
+ */
+function restartGame() {
+  // Resetta il timer
+  timeLeft = 60;
+  timerEl.textContent = `${timeLeft}`;
+  timerStarted = false;
+  clearInterval(timerInterval);
+  
+  // Resetta gli indici e le parole
+  currentIndex = 0;
+  results = new Array(words.length).fill(null);
+  renderWords();
+
+  // Svuota la casella di input
+  inputBox.value = "";
+  inputBox.disabled = false;
+  inputBox.focus();
+}
+
+/**
+ * Gestisce gli eventi della tastiera fisica.
+ * Avvia il timer alla prima pressione di un tasto e invia la parola quando si preme la barra spaziatrice.
+ */
 inputBox.addEventListener("keydown", async (e) => {
   // Avvia timer alla prima pressione su desktop
   if (!timerStarted && e.key.length === 1) {
@@ -98,7 +175,10 @@ inputBox.addEventListener("keydown", async (e) => {
   }
 });
 
-// ✅ Tastiera virtuale (mobile)
+/**
+ * Gestisce gli eventi della tastiera virtuale.
+ * Avvia il timer alla prima digitazione e invia la parola quando viene digitato uno spazio.
+ */
 inputBox.addEventListener("input", async () => {
   const typed = inputBox.value;
 
@@ -118,7 +198,10 @@ inputBox.addEventListener("input", async () => {
 
 
 
-// NEW: evidenzia dinamicamente la parola corrente in base alla digitazione
+/**
+ * Evidenzia dinamicamente la parola corrente in base alla digitazione dell'utente.
+ * Cambia il colore di sfondo della parola corrente per indicare errori o corrispondenze parziali.
+ */
 inputBox.addEventListener("input", () => {
   const currentWord = words[currentIndex] || "";
   const typed = inputBox.value;
@@ -135,29 +218,8 @@ inputBox.addEventListener("input", () => {
   }
 });
 
-function startTimer() {
-  timerInterval = setInterval(() => {
-    timeLeft--;
-    timerEl.textContent = `${timeLeft}`;
-    if (timeLeft <= 0) endGame();
-  }, 1000);
-}
 
-async function endGame() {
-  clearInterval(timerInterval);
-  inputBox.disabled = true;
-  wordBox.innerHTML = `<h2>⏳ Calcolo dei risultati...</h2>`;
+restartButton.addEventListener("click", restartGame);
 
-  try {
-    await fetch("/api/end", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId })
-    });
-    wordBox.innerHTML = `<h2>🏁 Partita terminata!</h2><p>I risultati sono stati inviati nel canale Discord.</p>`;
-  } catch (err) {
-    wordBox.innerHTML = `<h2>⚠️ Errore nel salvataggio dei risultati.</h2><p>Riprova più tardi.</p>`;
-  }
-}
-
+// Avvia il gioco al caricamento della pagina
 startGame();
