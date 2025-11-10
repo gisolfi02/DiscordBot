@@ -235,7 +235,7 @@ inputBox.addEventListener("input", () => {
 });
 
 
-restartButton.addEventListener("click", restartGame);
+//restartButton.addEventListener("click", restartGame);
 
 // Avvia il gioco al caricamento della pagina
 startGame();
