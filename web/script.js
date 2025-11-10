@@ -13,7 +13,7 @@ let timerInterval; // Riferimento al timer
 let timerStarted = false; // Flag per verificare se il timer è stato avviato
 
 // Costanti per la visualizzazione delle parole
-const WORDS_PER_LINE = 10; // Numero di parole per riga
+const WORDS_PER_LINE = 15; // Numero di parole per riga
 const LINES_VISIBLE = 2;   // Numero di righe visibili
 const WORDS_VISIBLE = WORDS_PER_LINE * LINES_VISIBLE; // Numero totale di parole visibili
 

@@ -1,5 +1,5 @@
-Discussioni
-Messaggio
+discussioni
+messaggio
 a
 abbastanza
 abilità
@@ -21,7 +21,6 @@ alleviare
 allora
 alto
 altro
-am
 amico
 amore
 ampio
@@ -114,7 +113,6 @@ catturato
 causa
 cavallo
 cella
-cent
 cento
 centro
 cerchio
